@@ -1,0 +1,26 @@
+package services
+
+import (
+    "context"
+    "errors"
+    "github.com/google/uuid"
+    "github.com/shopspring/decimal"
+    "{{ module_path }}/entities"
+)
+
+func {{ service.name }}(ctx context.Context, req {{ service.name }}Request) (*{{ service.name }}Response, error) {
+{% for pre in service.pre_checks %}
+    {{ pre }}
+{% endfor %}
+
+    return &{{ service.name }}Response{}, nil
+}
+
+type {{ service.name }}Request struct {
+{% for inp in service.inputs %}
+    {{ inp.name_go }} {{ inp.type_go }}
+{% endfor %}
+}
+
+type {{ service.name }}Response struct {
+}

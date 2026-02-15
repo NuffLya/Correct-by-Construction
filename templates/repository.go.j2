@@ -1,0 +1,21 @@
+package repository
+
+import (
+    "context"
+    "{{ module_path }}/entities"
+    "github.com/google/uuid"
+)
+
+type WalletRepository struct {
+}
+
+func (r *WalletRepository) GetByID(ctx context.Context, id uuid.UUID) (*entities.Wallet, error) {
+    return nil, nil
+}
+
+func (r *WalletRepository) Save(ctx context.Context, w *entities.Wallet) error {
+    if err := w.Validate(); err != nil {
+        return err
+    }
+    return nil
+}

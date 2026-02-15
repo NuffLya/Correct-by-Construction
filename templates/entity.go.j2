@@ -1,0 +1,47 @@
+package entities
+
+import (
+{% if needs_uuid %}
+    "github.com/google/uuid"
+{% endif %}
+{% if needs_decimal %}
+    "github.com/shopspring/decimal"
+{% endif %}
+{% if needs_time %}
+    "time"
+{% endif %}
+    "fmt"
+)
+
+{% for entity in entities %}
+{% if entity.enum_values %}
+type {{ entity.name }}Status string
+
+const (
+{% for val in entity.enum_values %}
+    {{ entity.name }}{{ val }} {{ entity.name }}Status = "{{ val }}"
+{% endfor %}
+)
+{% endif %}
+
+type {{ entity.name }} struct {
+{{ entity.field_lines | join("\n") }}
+}
+
+func (e *{{ entity.name }}) Validate() error {
+{% for inv in entity.invariants %}
+    {{ inv.check_go }}
+{% endfor %}
+    return nil
+}
+{% endfor %}
+
+type ErrInvariantViolation struct {
+    Entity    string
+    Invariant string
+    Message   string
+}
+
+func (e ErrInvariantViolation) Error() string {
+    return fmt.Sprintf("invariant violation [%s.%s]: %s", e.Entity, e.Invariant, e.Message)
+}

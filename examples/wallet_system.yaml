@@ -1,0 +1,75 @@
+name: WalletSystem
+version: "1.0.0"
+
+entities:
+  - name: Wallet
+    fields:
+      - {name: id, type: UUID, primary_key: true}
+      - {name: user_id, type: UUID, indexed: true}
+      - {name: balance, type: Decimal, precision: 18, scale: 2}
+      - {name: currency, type: String, length: 3}
+      - {name: status, type: Enum, values: [Active, Frozen, Closed]}
+      - {name: created_at, type: Timestamp}
+      - {name: updated_at, type: Timestamp}
+
+    invariants:
+      - name: positive_balance
+        expr: "balance >= 0"
+        severity: critical
+
+  - name: Transaction
+    fields:
+      - {name: id, type: UUID, primary_key: true}
+      - {name: from_wallet_id, type: UUID}
+      - {name: to_wallet_id, type: UUID}
+      - {name: amount, type: Decimal}
+      - {name: status, type: Enum, values: [Pending, Completed, Failed]}
+      - {name: created_at, type: Timestamp}
+
+services:
+  - name: CreateWallet
+    inputs:
+      - {name: user_id, type: UUID}
+      - {name: currency, type: String}
+
+    preconditions:
+      - "user_id != null"
+      - "currency in ISO_4217_CODES"
+
+    postconditions:
+      - "result.balance == 0"
+      - "result.status == Active"
+
+    strategy: Simple
+
+  - name: Transfer
+    inputs:
+      - {name: from_wallet_id, type: UUID}
+      - {name: to_wallet_id, type: UUID}
+      - {name: amount, type: Decimal}
+
+    preconditions:
+      - "amount > 0"
+      - "from_wallet_id != to_wallet_id"
+      - "Wallet(from_wallet_id).status == Active"
+      - "Wallet(to_wallet_id).status == Active"
+      - "Wallet(from_wallet_id).balance >= amount"
+      - "Wallet(from_wallet_id).currency == Wallet(to_wallet_id).currency"
+
+    postconditions:
+      - "Wallet(from_wallet_id).balance == OLD.Wallet(from_wallet_id).balance - amount"
+      - "Wallet(to_wallet_id).balance == OLD.Wallet(to_wallet_id).balance + amount"
+      - "sum(Wallet.balance) == OLD.sum(Wallet.balance)"
+      - "Transaction.status == Completed"
+
+    strategy: ACID_Transaction
+    isolation: Serializable
+    timeout: 5000
+    retry_policy: ExponentialBackoff
+
+architecture:
+  requirements:
+    rps_target: 1000
+    consistency: strong
+    durability: high
+    latency_p99: 100
